@@ -1,0 +1,118 @@
+name = "luparser-swift"
+language = "Swift"
+description = "Lu parser/pretty-printer round-trip workload (Swift / PropertyTestingKit, coverage-guided)."
+strategies = ["ptk"]
+
+# Ported from the canonical ETNA Lu workload (jwshii/etna, mirrored by
+# alpaylan/etna-haskell-luparser). The property is a parse/pretty round-trip:
+# parse(pretty(ast)) == ast for every parsable AST (values, expressions,
+# statements). Mutants are structural parser/pretty-printer bugs.
+#
+# Only the (mutant, property) pairs that a round-trip witness can actually
+# distinguish are listed (25 tasks across 11 mutants) — the unlisted pairs are
+# unwitnessable (e.g. `ppNot`/`bofP` never affect a bare value; `statementP_1`
+# needs nested blocks, caught only by roundtrip_stat). The reference's
+# `reserved_*` / `nameP_1` mutants are omitted entirely: a name equal to or
+# containing a reserved word fails the round-trip precondition, so they are
+# unwitnessable under this property. Witnesses are single ASTs in wire form
+# (see Wire.swift), each harvested by fuzzing its mutant (scripts/detect.sh) and
+# verified to round-trip `true` on the clean build (Tests WitnessTests).
+#
+# Mutants are applied via ETNA marauder source-swap + recompile (active variant
+# in Sources/LuParser/Lang.swift); marauder.toml registers Swift as a custom
+# language.
+
+mutations = [
+  "wsP_1",
+  "stringP_1",
+  "boolValP_1",
+  "stringValP_1",
+  "stringValP_2",
+  "stringValP_3",
+  "stringValP_4",
+  "bofP_1",
+  "nameP_2",
+  "statementP_1",
+  "ppNot_1",
+]
+
+[[tasks]]
+mutations = ["wsP_1"]
+tasks = [
+  { property = "roundtrip_val", witnesses = [{ input = "(IntVal 0)" }] },
+  { property = "roundtrip_exp", witnesses = [{ input = "(Op1 Not (Val (BoolVal true)))" }] },
+  { property = "roundtrip_stat", witnesses = [{ input = "(If (Val (BoolVal true)) (Block ((Empty))) (Block ((Empty))))" }] },
+]
+
+[[tasks]]
+mutations = ["stringP_1"]
+tasks = [
+  { property = "roundtrip_exp", witnesses = [{ input = "(Op2 (Val (StringVal #R29qcw==)) Gt (Op2 (Var (Name (VarName #X3g=))) Concat (Var (Name (VarName #X3g=)))))" }] },
+  { property = "roundtrip_stat", witnesses = [{ input = "(Assign (Proj (Op2 (Var (Name (VarName #eA==))) Minus (Var (Name (VarName #X3g=)))) (TableConst ((FieldKey (Val (IntVal -511)) (Val (StringVal #ezNMajh2)))))) (Op2 (Var (Name (VarName #eQ==))) Divide (Val (IntVal -491))))" }] },
+]
+
+[[tasks]]
+mutations = ["boolValP_1"]
+tasks = [
+  { property = "roundtrip_exp", witnesses = [{ input = "(Op2 (Op2 (Op2 (Val (BoolVal false)) Plus (Var (Proj (Val (IntVal 428)) (Val (BoolVal true))))) Eq (Val (IntVal -680))) Ge (Op2 (Op1 Neg (Op2 (Var (Name (VarName #X0c=))) Times (Var (Name (VarName #X0c=))))) Minus (TableConst ((FieldName (VarName #eA==) (Val (NilVal))) (FieldKey (Var (Name (VarName #X0c=))) (Val (NilVal)))))))" }] },
+  { property = "roundtrip_stat", witnesses = [{ input = "(If (Val (BoolVal true)) (Block ((Empty))) (Block ((Empty))))" }] },
+]
+
+[[tasks]]
+mutations = ["stringValP_1"]
+tasks = [
+  { property = "roundtrip_val", witnesses = [{ input = "(StringVal #)" }] },
+  { property = "roundtrip_exp", witnesses = [{ input = "(Val (StringVal #))" }] },
+  { property = "roundtrip_stat", witnesses = [{ input = "(Repeat (Block ((Empty))) (Val (StringVal #)))" }] },
+]
+
+[[tasks]]
+mutations = ["stringValP_2"]
+tasks = [
+  { property = "roundtrip_val", witnesses = [{ input = "(StringVal #)" }] },
+  { property = "roundtrip_exp", witnesses = [{ input = "(Val (StringVal #))" }] },
+  { property = "roundtrip_stat", witnesses = [{ input = "(Repeat (Block ((Empty))) (Val (StringVal #)))" }] },
+]
+
+[[tasks]]
+mutations = ["stringValP_3"]
+tasks = [
+  { property = "roundtrip_exp", witnesses = [{ input = "(Op1 Not (Val (BoolVal true)))" }] },
+  { property = "roundtrip_stat", witnesses = [{ input = "(Assign (Name (VarName #eDA=)) (Op1 Not (Val (BoolVal false))))" }] },
+]
+
+[[tasks]]
+mutations = ["stringValP_4"]
+tasks = [
+  { property = "roundtrip_val", witnesses = [{ input = "(StringVal #)" }] },
+  { property = "roundtrip_exp", witnesses = [{ input = "(Val (StringVal #))" }] },
+  { property = "roundtrip_stat", witnesses = [{ input = "(Repeat (Block ((Empty))) (Val (StringVal #)))" }] },
+]
+
+[[tasks]]
+mutations = ["bofP_1"]
+tasks = [
+  { property = "roundtrip_exp", witnesses = [{ input = "(Op2 (Val (IntVal 1)) Ge (Val (IntVal 2)))" }] },
+  { property = "roundtrip_stat", witnesses = [{ input = "(Assign (Name (VarName #eA==)) (Op2 (Val (IntVal 1)) Ge (Val (IntVal 2))))" }] },
+]
+
+[[tasks]]
+mutations = ["nameP_2"]
+tasks = [
+  { property = "roundtrip_exp", witnesses = [{ input = "(Var (Name (VarName #eDA=)))" }] },
+  { property = "roundtrip_stat", witnesses = [{ input = "(Assign (Name (VarName #eDA=)) (Op1 Not (Val (BoolVal false))))" }] },
+]
+
+[[tasks]]
+mutations = ["statementP_1"]
+tasks = [
+  { property = "roundtrip_stat", witnesses = [{ input = "(If (Op1 Neg (Op1 Len (Op1 Neg (Val (NilVal))))) (Block ((Empty))) (Block ((If (Val (StringVal #TSM2RHg=)) (Block ((Assign (Name (VarName #WA==)) (Var (Name (VarName #eHk=)))))) (Block ())) (Assign (Name (VarName #WA==)) (Var (Name (VarName #Xw==)))))))" }] },
+]
+
+[[tasks]]
+mutations = ["ppNot_1"]
+tasks = [
+  { property = "roundtrip_exp", witnesses = [{ input = "(Op1 Not (Val (BoolVal true)))" }] },
+  { property = "roundtrip_stat", witnesses = [{ input = "(Assign (Name (VarName #eDA=)) (Op1 Not (Val (BoolVal false))))" }] },
+]
+
