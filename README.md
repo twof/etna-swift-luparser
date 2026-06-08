@@ -111,16 +111,23 @@ strategies). Lu has no Rust port.
 type-preservation workloads (Fsub/STLC), where only a type-directed generator
 ever builds a valid input and random/enumerative strategies solve nothing, Lu's
 structural round-trip mutants are shallow enough that **every strategy — even
-generic `Random` — solves all 25 tasks**, all in well under 0.1s. On wall-clock
-time the lightweight Haskell strategies are marginally ahead of swift/ptk, whose
-parallel-engine + coverage-instrumentation startup is pure overhead when a bug
-falls out in the first few inputs.
+generic `Random` — solves all 25 tasks**.
 
-Where the coverage-guided + seeded approach shows is **worst-case
-executions-to-find**: swift / ptk is the **only strategy that finds every bug in
-≤10 inputs** (max 10), whereas `Random` tails out to 856 inputs and `Hybrid` to
-201. The PTK seeds pin each mutated path, and coverage feedback keeps the search
-from wandering — so the distribution has no tail.
+On **wall-clock time**, swift / ptk is the **slowest** of the four — it is the
+only strategy with a task taking over 0.1s (0.10s), running ≈0.02–0.10s per
+task, whereas all three Haskell strategies finish every task in ≈1–9ms. PTK's
+parallel-engine + coverage-instrumentation startup is pure overhead on a
+workload where a bug falls out in the first handful of inputs.
+
+The one axis where the coverage-guided + seeded approach helps is the **tail of
+the executions-to-find distribution**. swift / ptk needed **at most 10 inputs**
+for any task (22 of 25 in fewer than 10, the other 3 at exactly 10), whereas
+`Random` tails out to **856** inputs, `Hybrid` to 201, and `Correct` to 87. Note
+this is *only* a worst-case effect: on the common case `Correct` actually solves
+slightly more tasks in under 10 inputs (23 vs 22). The seeds pin each mutated
+path and coverage feedback bounds the search, so ptk has no long tail — but it
+pays for that machinery in wall-clock time, and on a workload this shallow the
+tail barely matters.
 
 ![executions-to-find by strategy](figures/luparser_tests.png)
 
