@@ -64,6 +64,7 @@ let enginesParallelism: Int = {
 /// counterexample, nil = discard, true = pass). `wire` serializes a failing input.
 private func runFuzz<Input: MutatorProviding & Codable & Hashable>(
     duration: Duration,
+    coverageStrategy: CoverageStrategy,
     check: @escaping @Sendable (Input) -> Bool?,
     wire: @escaping @Sendable (Input) -> String
 ) async -> SolveOutcome {
@@ -75,6 +76,7 @@ private func runFuzz<Input: MutatorProviding & Codable & Hashable>(
         let result = try await fuzz(
             duration: duration,
             persistence: .ephemeral,
+            coverageStrategy: coverageStrategy,
             parallelism: enginesParallelism,
             plugins: { [.corpusMutation(), .stopOnFirstFailure(reason: .custom("counterexample_found"))] }
         ) { (input: Input) in
@@ -100,18 +102,38 @@ private func runFuzz<Input: MutatorProviding & Codable & Hashable>(
     }
 }
 
-public enum SolveError: Error { case unknownProperty(String) }
+public enum SolveError: Error { case unknownProperty(String), unknownStrategy(String) }
 
-/// Coverage-guided solve: fuzz `property` for `duration`. The active mutant is
-/// whichever marauder variant is compiled into `LuParser`.
-public func solve(property: String, duration: Duration) async throws -> SolveOutcome {
+/// The PTK coverage strategies this workload exposes as ETNA strategy names.
+/// `ptk` stays as a back-compat alias for the default (`.pathTrie`).
+public func coverageStrategy(named name: String) throws -> CoverageStrategy {
+    switch name {
+    case "ptk", "ptk-pathtrie": return .pathTrie
+    case "ptk-signaturematch": return .signatureMatch
+    case "ptk-newedge": return .newEdge
+    case "ptk-hitcountbuckets": return .hitCountBuckets
+    default: throw SolveError.unknownStrategy(name)
+    }
+}
+
+/// Coverage-guided solve: fuzz `property` for `duration` judging novelty with
+/// `coverageStrategy`. The active mutant is whichever marauder variant is
+/// compiled into `LuParser`.
+public func solve(
+    property: String,
+    duration: Duration,
+    coverageStrategy: CoverageStrategy = .pathTrie
+) async throws -> SolveOutcome {
     switch property {
     case "roundtrip_val":
-        return await runFuzz(duration: duration, check: { prop_roundtrip_val($0) }, wire: { encodeValue($0) })
+        return await runFuzz(duration: duration, coverageStrategy: coverageStrategy,
+                             check: { prop_roundtrip_val($0) }, wire: { encodeValue($0) })
     case "roundtrip_exp":
-        return await runFuzz(duration: duration, check: { prop_roundtrip_exp($0) }, wire: { encodeExpr($0) })
+        return await runFuzz(duration: duration, coverageStrategy: coverageStrategy,
+                             check: { prop_roundtrip_exp($0) }, wire: { encodeExpr($0) })
     case "roundtrip_stat":
-        return await runFuzz(duration: duration, check: { prop_roundtrip_stat($0) }, wire: { encodeStatement($0) })
+        return await runFuzz(duration: duration, coverageStrategy: coverageStrategy,
+                             check: { prop_roundtrip_stat($0) }, wire: { encodeStatement($0) })
     default:
         throw SolveError.unknownProperty(property)
     }

@@ -1,7 +1,7 @@
 name = "luparser-swift"
 language = "Swift"
 description = "Lu parser/pretty-printer round-trip workload (Swift / PropertyTestingKit, coverage-guided)."
-strategies = ["ptk"]
+strategies = ["ptk-pathtrie", "ptk-signaturematch", "ptk-newedge", "ptk-hitcountbuckets"]
 
 # Ported from the canonical ETNA Lu workload (jwshii/etna, mirrored by
 # alpaylan/etna-haskell-luparser). The property is a parse/pretty round-trip:
