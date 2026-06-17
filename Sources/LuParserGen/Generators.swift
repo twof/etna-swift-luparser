@@ -211,7 +211,7 @@ extension Value: MutatorProviding {
     public static var defaultMutator: Mutator<Value> {
         Mutator(
             seeds: [.IntVal(0), .StringVal(""), .StringVal("a0_"), .BoolVal(true), .BoolVal(false), .NilVal],
-            mutate: { mutateValue($0) },
+            mutate: { v, rng in mutateValue(v).randomElement(using: &rng) ?? v },
             generate: { genValueTop(&$0) }
         )
     }
@@ -229,7 +229,7 @@ extension Expression: MutatorProviding {
                 .TableConst([.FieldName(VarName("x"), .Val(.IntVal(1)))]),         // braces (stringP)
                 .Var(.Proj(.Var(.Name(VarName("t"))), .Val(.IntVal(1)))),          // indexing
             ],
-            mutate: { mutateExpr($0) },
+            mutate: { v, rng in mutateExpr(v).randomElement(using: &rng) ?? v },
             generate: { genExpTop(&$0) }
         )
     }
@@ -245,7 +245,7 @@ extension Statement: MutatorProviding {
                 .While(.Val(.BoolVal(true)), Block([.Assign(.Name(VarName("y")), .Val(.IntVal(0)))])),
                 .Repeat(Block([.Empty]), .Val(.StringVal(""))),                    // stringValP via stat
             ],
-            mutate: { mutateStatement($0) },
+            mutate: { v, rng in mutateStatement(v).randomElement(using: &rng) ?? v },
             generate: { genStatementTop(&$0) }
         )
     }

@@ -77,12 +77,13 @@ private func runFuzz<Input: MutatorProviding & Codable & Hashable>(
             duration: duration,
             persistence: .ephemeral,
             coverageStrategy: coverageStrategy,
-            parallelism: enginesParallelism,
-            // PTK_SCHEDULER=entropic swaps uniform corpus replay for PTK's
+            // PTK_SCHEDULER=entropic swaps the default weighted pool for PTK's
             // Entropic energy scheduler (rare-feature entropy weighting).
+            scheduler: ProcessInfo.processInfo.environment["PTK_SCHEDULER"] == "entropic"
+                ? .weightedPool(policies: { [EntropicWeightPolicy()] })
+                : .weightedPool(),
+            parallelism: enginesParallelism,
             plugins: { [
-                ProcessInfo.processInfo.environment["PTK_SCHEDULER"] == "entropic"
-                    ? .energyMutation() : .corpusMutation(),
                 .stopOnFirstFailure(reason: .custom("counterexample_found")),
             ] }
         ) { (input: Input) in
