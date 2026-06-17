@@ -77,11 +77,18 @@ private func runFuzz<Input: MutatorProviding & Codable & Hashable>(
             duration: duration,
             persistence: .ephemeral,
             coverageStrategy: coverageStrategy,
-            // PTK_SCHEDULER=entropic swaps the default weighted pool for PTK's
-            // Entropic energy scheduler (rare-feature entropy weighting).
-            scheduler: ProcessInfo.processInfo.environment["PTK_SCHEDULER"] == "entropic"
-                ? .weightedPool(policies: { [EntropicWeightPolicy()] })
-                : .weightedPool(),
+            // PTK_SCHEDULER selects the pool configuration. The DEFAULT (bare
+            // .weightedPool()) is now feature-ownership culling, matching PTK's
+            // flipped library default. "entropic" swaps in PTK's Entropic energy
+            // scheduler (rare-feature entropy weighting); "everydiscovery"
+            // restores the old keep-everything behavior.
+            scheduler: {
+                switch ProcessInfo.processInfo.environment["PTK_SCHEDULER"] {
+                case "entropic": return .weightedPool(policies: { [EntropicWeightPolicy()] })
+                case "everydiscovery": return .weightedPool(admission: .everyDiscovery)
+                default: return .weightedPool()
+                }
+            }(),
             parallelism: enginesParallelism,
             plugins: { [
                 .stopOnFirstFailure(reason: .custom("counterexample_found")),
