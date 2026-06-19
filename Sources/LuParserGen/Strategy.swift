@@ -76,7 +76,6 @@ private func runFuzz<Input: MutatorProviding & Codable & Hashable>(
         let result = try await fuzz(
             duration: duration,
             persistence: .ephemeral,
-            coverageStrategy: coverageStrategy,
             // PTK_SCHEDULER selects the pool configuration. The DEFAULT (bare
             // MutationScheduler.weightedPool()) is now feature-ownership culling, matching PTK's
             // flipped library default. "entropic" swaps in PTK's Entropic energy
@@ -84,9 +83,9 @@ private func runFuzz<Input: MutatorProviding & Codable & Hashable>(
             // restores the old keep-everything behavior.
             scheduler: {
                 switch ProcessInfo.processInfo.environment["PTK_SCHEDULER"] {
-                case "entropic": return MutationScheduler.weightedPool(policies: { [EntropicWeightPolicy()] })
-                case "everydiscovery": return MutationScheduler.weightedPool(admission: .everyDiscovery)
-                default: return MutationScheduler.weightedPool()
+                case "entropic": return MutationScheduler.weightedPool(policies: { [EntropicWeightPolicy()] }, coverageStrategy: coverageStrategy)
+                case "everydiscovery": return MutationScheduler.weightedPool(admission: .everyDiscovery, coverageStrategy: coverageStrategy)
+                default: return MutationScheduler.weightedPool(coverageStrategy: coverageStrategy)
                 }
             }(),
             parallelism: enginesParallelism,
